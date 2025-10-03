@@ -1,4 +1,5 @@
 import socket
+import struct
 
 ETH_P_CUSTOM = 0x88B5  # EtherType personalizado para Link-Chat
 
