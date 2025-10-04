@@ -34,9 +34,8 @@ class FileTransfer:
             if i == total_frags - 1:
                 flags = protocolo.set_flag(flags, protocolo.FLAG_IS_LAST)
 
-            # Use the provided msg_type when packing the header
-            header = protocolo.pack_header(file_id, total_frags, i, flags, msg_type, len(frag))
             payload = protocolo.append_crc(frag)
+            header = protocolo.pack_header(file_id, total_frags, i, flags, msg_type, len(payload))
             packet = network.build_ethernet_frame(self.dst_mac, self.src_mac, network.ETH_P_CUSTOM, header + payload)
 
             ack_received = False
@@ -58,18 +57,18 @@ class FileTransfer:
         max_payload = 1472
 
         if len(data) <= max_payload:
-        # El mensaje cabe en un solo fragmento
+            payload = protocolo.append_crc(data)
             header = protocolo.pack_header(
                 file_id=0,
                 total_frags=1,
                 frag_index=0,
                 flags=0,
                 msg_type=protocolo.MSG_CHAT,
-                payload_len=len(data)
-        )
+                payload_len=len(payload)
+            )
             packet = network.build_ethernet_frame(
-                self.dst_mac, self.src_mac, network.ETH_P_CUSTOM, header + data
-        )
+                self.dst_mac, self.src_mac, network.ETH_P_CUSTOM, header + payload
+            )
             network.send_frame(self.sock, packet)
         else:
         # Si mensaje es muy largo, fragmentar y enviar usando la misma función que para archivos
