@@ -36,8 +36,8 @@ def unpack_header(data):
         'msg_type': vals[4],
         'payload_len': vals[5],
     }
-    payload = data[LINK_HDR_SIZE:LINK_HDR_SIZE + hdr['payload_len']]
-    return hdr, payload
+    remainder = data[LINK_HDR_SIZE:]
+    return hdr, remainder
 
 # Funciones para flags
 def set_flag(flags, flag):

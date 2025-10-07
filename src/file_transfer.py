@@ -35,9 +35,9 @@ class FileTransfer:
                 flags = protocolo.set_flag(flags, protocolo.FLAG_IS_LAST)
 
             # Use the provided msg_type when packing the header
-            header = protocolo.pack_header(file_id, total_frags, i, flags, msg_type, len(frag))
-            payload = protocolo.append_crc(frag)
-            packet = network.build_ethernet_frame(self.dst_mac, self.src_mac, network.ETH_P_CUSTOM, header + payload)
+            payload_with_crc = protocolo.append_crc(frag)  # frag + 4 bytes CRC
+            header = protocolo.pack_header(file_id, total_frags, i, flags, msg_type, len(payload_with_crc))
+            packet = network.build_ethernet_frame(self.dst_mac, self.src_mac, network.ETH_P_CUSTOM, header + payload_with_crc)
 
             ack_received = False
             while not ack_received:
@@ -101,7 +101,7 @@ class FileReceiver:
         self.src_mac = src_mac
         self.buffers = {}
 
-    def receive_fragment(self, packet):
+    def receive_fragment(self, packet, src_mac):
         hdr, payload_crc = protocolo.unpack_header(packet)
         valid_crc, payload = protocolo.verify_and_strip_crc(payload_crc)
         if not valid_crc:
@@ -117,7 +117,8 @@ class FileReceiver:
 
         self.buffers[file_id][frag_index] = payload
 
-        self.send_ack(file_id, frag_index)
+        # enviar ACK de vuelta al src_mac (el emisor del fragmento)
+        self.send_ack(file_id, frag_index, src_mac)
 
         if None not in self.buffers[file_id]:
             complete_data = b''.join(self.buffers[file_id])
@@ -125,7 +126,7 @@ class FileReceiver:
             return complete_data
         return None
 
-    def send_ack(self, file_id, frag_index):
+    def send_ack(self, file_id, frag_index, dst_mac):
         flags = 0
         msg_type = protocolo.MSG_ACK
         payload_len = 0
@@ -134,8 +135,8 @@ class FileReceiver:
         header = protocolo.pack_header(file_id, total_frags, frag_index, flags, msg_type, payload_len)
 
         ack_packet = network.build_ethernet_frame(
-            self.dst_mac,
-            self.src_mac,
+            dst_mac,          # A quien responder
+            self.src_mac,     # MAC local del receptor (emisor del ACK)
             network.ETH_P_CUSTOM,
             header
         )

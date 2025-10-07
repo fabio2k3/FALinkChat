@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import os
 import argparse
@@ -8,9 +9,6 @@ import socket
 import fcntl
 import struct
 
-# Ajuste del path para poder importar los módulos desde tests/
-# Si este archivo está en PROJECT_ROOT/tests/test_2terminals.py,
-# entonces ROOT = PROJECT_ROOT
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(ROOT, 'src'))
 
@@ -92,7 +90,7 @@ def receiver_loop(sock, discovery_obj, ft_sender, ft_receiver, stop_event):
             if ethertype != network.ETH_P_CUSTOM:
                 continue
 
-            # Discovery
+            # Discovery / protocolo
             try:
                 hdr, body = protocolo.unpack_header(payload)
             except Exception:
@@ -100,21 +98,26 @@ def receiver_loop(sock, discovery_obj, ft_sender, ft_receiver, stop_event):
 
             if hdr['msg_type'] in (protocolo.MSG_DISCOVERY, protocolo.MSG_REPLY):
                 discovery_obj.handle_packet(src_mac, payload)
+
             elif hdr['msg_type'] == protocolo.MSG_CHAT:
                 try:
                     text = body.decode('utf-8')
                 except Exception:
                     text = repr(body)
                 print(f"\n[{mac_bytes_to_str(src_mac)}] {text}\n> ", end='', flush=True)
+
             elif hdr['msg_type'] == protocolo.MSG_FILE_CHUNK:
-                complete = ft_receiver.receive_fragment(payload)
+                # Pasamos src_mac para que el FileReceiver pueda enviar el ACK al emisor
+                complete = ft_receiver.receive_fragment(payload, src_mac)
                 if complete:
                     fname = f"received_{int(time.time())}.bin"
                     with open(fname, 'wb') as f:
                         f.write(complete)
                     print(f"[receiver] File recibido: {fname}")
+
             elif hdr['msg_type'] == protocolo.MSG_ACK:
                 ft_sender.receive_ack(payload)
+
         except Exception as e:
             print(f"[receiver] exception: {e}")
             time.sleep(0.1)
@@ -195,7 +198,7 @@ def main():
                 dst_mac = mac_str_to_bytes(args[0])
                 ft_sender.dst_mac = dst_mac
                 ft_sender.send_chat_message(args[1])
-            elif cmd == "--sendfile" or cmd == "/sendfile":
+            elif cmd == "/sendfile" or cmd == "--sendfile":
                 if len(args) < 2:
                     print("Uso: /sendfile <MAC> <archivo>")
                     continue
