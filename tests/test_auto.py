@@ -58,46 +58,131 @@ def detect_default_iface():
 
 # DISCOVERY
 class Discovery:
+    """
+    Esta clase implementa el mecanismo de *descubrimiento de vecinos* en la red local.
+    Su función principal es permitir que los nodos 
+    se encuentren entre sí cuando están en la misma red, intercambiando mensajes
+    de broadcast y reply en la capa de enlace.
+
+    Funciona de la siguiente manera:
+      1. Se envía un mensaje de tipo DISCOVERY (broadcast a todos los equipos).
+      2. Los equipos que reciben ese mensaje responden con un mensaje de tipo REPLY.
+      3. El nodo que envió el DISCOVERY guarda las MAC de quienes respondieron,
+         construyendo una lista de vecinos disponibles.
+    """
+
     def __init__(self, sock, src_mac):
-        self.sock = sock
-        self.src_mac = src_mac
-        self.neighbors = {}  # MAC -> timestamp
+        """
+        Constructor de la clase Discovery.
+        Recibe:
+          - sock: el socket de bajo nivel (raw socket) usado para enviar y recibir tramas Ethernet.
+          - src_mac: la dirección MAC local de este dispositivo.
+
+        Inicializa:
+          - self.neighbors: un diccionario que guardará los vecinos descubiertos.
+            La clave es la MAC del vecino y el valor es el tiempo (timestamp)
+            en el que se detectó.
+        """
+        self.sock = sock              # Socket de capa de enlace
+        self.src_mac = src_mac        # Dirección MAC del equipo local
+        self.neighbors = {}           # Diccionario MAC -> timestamp (última vez visto)
 
     def send_discovery(self):
+        """
+        Enviar una trama de broadcast de tipo DISCOVERY a toda la red local.
+
+        - Se crea un encabezado (header) usando el protocolo definido por 'protocolo.pack_header()'.
+        - El tipo de mensaje es MSG_DISCOVERY.
+        - Se construye una trama Ethernet con destino 'BROADCAST_MAC' (FF:FF:FF:FF:FF:FF).
+        - La trama se envía usando 'network.send_frame()'.
+        """
+        # Construir el encabezado del mensaje (sin carga útil)
         header = protocolo.pack_header(
-            file_id=0,
-            total_frags=0,
-            frag_index=0,
-            flags=0,
-            msg_type=protocolo.MSG_DISCOVERY,
-            payload_len=0
+            file_id=0,               # Identificador de archivo (no aplica en discovery)
+            total_frags=0,           # Número total de fragmentos (no aplica)
+            frag_index=0,            # Índice de fragmento (no aplica)
+            flags=0,                 # Flags (ninguno en este caso)
+            msg_type=protocolo.MSG_DISCOVERY,  # Tipo de mensaje: DISCOVERY
+            payload_len=0            # Longitud del contenido (no hay payload)
         )
-        frame = network.build_ethernet_frame(BROADCAST_MAC, self.src_mac, network.ETH_P_CUSTOM, header)
+
+        # Construir la trama Ethernet con destino broadcast
+        frame = network.build_ethernet_frame(
+            BROADCAST_MAC,           # MAC destino (todos los equipos)
+            self.src_mac,            # MAC origen (la de este equipo)
+            network.ETH_P_CUSTOM,    # Tipo EtherType personalizado de LinkChat
+            header                   # Datos del mensaje
+        )
+
+        # Enviar la trama de broadcast a través del socket
         network.send_frame(self.sock, frame)
         print("[discovery] MSG_DISCOVERY enviado (broadcast)")
 
     def handle_packet(self, src_mac, payload):
+        """
+        Procesar una trama recibida que puede ser DISCOVERY o REPLY.
+
+        Parámetros:
+          - src_mac: MAC del remitente de la trama recibida.
+          - payload: datos de la trama (incluye el encabezado de protocolo LinkChat).
+
+        Funcionamiento:
+          1. Se desempaqueta el encabezado para leer el tipo de mensaje.
+          2. Si es DISCOVERY → se envía una respuesta (REPLY) solo al emisor.
+          3. Si es REPLY → se guarda la MAC del emisor en la lista de vecinos.
+        """
+        # Interpretar el encabezado del mensaje recibido
         hdr, _ = protocolo.unpack_header(payload)
+
+        # Caso 1: recibimos un mensaje de descubrimiento (otro nodo quiere saber quiénes hay)
         if hdr['msg_type'] == protocolo.MSG_DISCOVERY:
+            # Construimos un encabezado de tipo REPLY
             reply_hdr = protocolo.pack_header(
                 file_id=0,
                 total_frags=0,
                 frag_index=0,
                 flags=0,
-                msg_type=protocolo.MSG_REPLY,
+                msg_type=protocolo.MSG_REPLY,  # Tipo de mensaje: respuesta
                 payload_len=0
             )
-            reply_frame = network.build_ethernet_frame(src_mac, self.src_mac, network.ETH_P_CUSTOM, reply_hdr)
+
+            # Creamos una trama dirigida directamente al remitente original
+            reply_frame = network.build_ethernet_frame(
+                src_mac,               # Destino: quien envió el DISCOVERY
+                self.src_mac,          # Origen: nuestra MAC
+                network.ETH_P_CUSTOM,  # Tipo de protocolo personalizado
+                reply_hdr              # Cuerpo del mensaje
+            )
+
+            # Enviar la respuesta directamente al descubridor
             network.send_frame(self.sock, reply_frame)
             print(f"[discovery] REPLY enviado a {mac_bytes_to_str(src_mac)}")
+
+        # Caso 2: recibimos un mensaje de respuesta (otro nodo nos ha respondido)
         elif hdr['msg_type'] == protocolo.MSG_REPLY:
+            # Guardamos la MAC del remitente con su hora de detección
             self.neighbors[src_mac] = time.time()
             print(f"[discovery] MSG_REPLY recibido de {mac_bytes_to_str(src_mac)}")
 
     def get_neighbors(self):
+        """
+        Devolver la lista actual de vecinos conocidos.
+
+        - Limpia los que ya no han respondido en los últimos 300 segundos (5 minutos).
+        - Retorna una lista de direcciones MAC activas.
+        """
         now = time.time()
-        self.neighbors = {mac: t for mac, t in self.neighbors.items() if now - t < 300}
+
+        # Mantener solo los vecinos recientes (últimos 5 minutos)
+        self.neighbors = {
+            mac: t
+            for mac, t in self.neighbors.items()
+            if now - t < 300
+        }
+
+        # Devuelve solo las MAC (sin los timestamps)
         return list(self.neighbors.keys())
+
 
 # Receptor 
 def receiver_loop(sock, discovery_obj, ft_sender, ft_receiver, stop_event):
