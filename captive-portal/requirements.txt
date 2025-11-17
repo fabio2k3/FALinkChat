@@ -1,0 +1,9 @@
+# No se requieren dependencias externas de Python
+# El proyecto utiliza únicamente la biblioteca estándar de Python
+
+# Dependencias del sistema (instalar con apt-get):
+# - iptables
+# - ipset
+# - hostapd
+# - dnsmasq
+# - python3 (>= 3.7)
