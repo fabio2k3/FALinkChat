@@ -2,34 +2,31 @@
 set -euo pipefail
 
 IF_AP="wlo1"
-DNSMASQ_CONF_ORIG="/etc/dnsmasq.conf.orig"
 
 echo "[+] Deteniendo modo AP..."
 
-# Parar los servicios
-sudo systemctl stop hostapd
-sudo systemctl stop dnsmasq
+# 🔹 Parar hostapd y dnsmasq
+sudo pkill hostapd  
+sudo pkill dnsmasq   
 
-# Limpiar reglas iptables
+# 🔹 Quitar regla FORWARD que apunta a captive_portal
+sudo iptables -D FORWARD -i "$IF_AP" -j captive_portal 2>/dev/null || true
+
+# 🔹 Limpiar reglas y borrar la cadena captive_portal
+sudo iptables -F captive_portal 2>/dev/null || true
+sudo iptables -X captive_portal 2>/dev/null || true
+
+# 🔹 Limpiar NAT
 sudo iptables -t nat -F
-sudo iptables -F FORWARD
-sudo iptables -X captive_portal || true
-sudo ipset destroy AUTHORIZED || true
 
-# Quitar la IP estática de la interfaz AP
+# 🔹 Destruir ipset
+sudo ipset destroy AUTHORIZED 2>/dev/null || true
+
+# 🔹 Quitar IP estática de la interfaz AP
 sudo ip addr flush dev "$IF_AP"
 
-# Reactivar la gestión de la interfaz WiFi por NetworkManager
+# 🔹 Restaurar gestión por NetworkManager
 sudo nmcli device set "$IF_AP" managed yes
 sudo nmcli radio wifi on
 
-# Restaurar dnsmasq original si hay respaldo
-if [ -f "$DNSMASQ_CONF_ORIG" ]; then
-  echo "[+] Restaurando configuración original de dnsmasq"
-  sudo mv "$DNSMASQ_CONF_ORIG" /etc/dnsmasq.conf
-  sudo systemctl restart dnsmasq
-else
-  echo "[-] No se encontró respaldo de dnsmasq para restaurar"
-fi
-
-echo "[+] Modo AP desactivado."
+echo "[+] Modo AP desactivado. Sistema restaurado."

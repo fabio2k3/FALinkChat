@@ -73,6 +73,6 @@ class PortalHandler(BaseHTTPRequestHandler):
                 self.serve_content(err, 401, "text/html")
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("", 80), PortalHandler)
-    print("Servidor iniciado en puerto 80")
+    server = ThreadingHTTPServer(("", 8080), PortalHandler)
+    print("Servidor iniciado en puerto 8080")
     server.serve_forever()
