@@ -14,7 +14,7 @@ AP_IP="192.168.50.1"
 
 HOSTAPD_PID="/var/run/hostapd_portal.pid"
 DNSMASQ_PID="/var/run/dnsmasq_portal.pid"
-PORTAL_PID="/var/run/portal_server.pid"
+PORTAL_PID="/var/run/portal_main.pid"
 
 #-----------------------------------------
 # FUNCIONES
