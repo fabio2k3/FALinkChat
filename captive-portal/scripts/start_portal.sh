@@ -36,7 +36,7 @@ BACKEND_DIR="$PROJECT_DIR/backend"
 # Archivos PID
 HOSTAPD_PID="/var/run/hostapd_portal.pid"
 DNSMASQ_PID="/var/run/dnsmasq_portal.pid"
-PORTAL_PID="/var/run/portal_server.pid"
+PORTAL_PID="/var/run/portal_main.pid"
 
 #-----------------------------------------
 # FUNCIONES AUXILIARES
@@ -368,14 +368,15 @@ start_services() {
     # Iniciar servidor del portal
     log_info "Iniciando servidor del portal cautivo..."
     cd "$BACKEND_DIR"
-    python3 portal_server.py &
+    # Iniciar el servidor manual (main.py)
+    python3 ../../FALinkChat/src/main.py &
     echo $! > "$PORTAL_PID"
     sleep 2
-    
+
     if pgrep -F "$PORTAL_PID" &>/dev/null; then
-        log_success "Portal cautivo iniciado en http://$AP_IP:5000"
+        log_success "Servidor manual iniciado correctamente"
     else
-        log_error "Portal cautivo no pudo iniciarse"
+        log_error "El servidor manual no pudo iniciarse"
         exit 1
     fi
 }
