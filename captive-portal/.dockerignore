@@ -1,0 +1,40 @@
+# .dockerignore - Archivos que Docker ignora al construir
+
+# Archivos de Git
+.git
+.gitignore
+.gitattributes
+
+# Archivos de Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+tests/
+*.log
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# Otros
+.env
+*.md
+README.md
