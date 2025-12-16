@@ -6,7 +6,14 @@ from auth import load_users, check_user
 from fw_manager import add_authorized
 
 # Cargar usuarios al iniciar el servidor
-load_users()
+#load_users()#
+try:
+    USERS = load_users()
+except FileNotFoundError:
+    print("ERROR: config/users.txt no encontrado")
+    USERS = {}  # Diccionario vacío
+    exit(1)
+
 
 def load_file(name, folder="html"):
     """Carga archivos HTML o CSS desde la carpeta especificada"""

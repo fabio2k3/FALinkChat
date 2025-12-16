@@ -10,6 +10,8 @@ def load_users(path="config/users.txt"):
             if ":" in line:
                 user, pwd = line.split(":", 1)
                 USERS[user] = pwd
+    return USERS 
+
 
 def check_user(user, pwd):
     """Verifica si usuario y contraseña son correctos."""

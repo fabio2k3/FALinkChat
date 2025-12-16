@@ -1,0 +1,7 @@
+# Archivo de usuarios para el portal cautivo
+# Formato: usuario:contraseña
+# Líneas que comienzan con # son comentarios
+
+admin:admin123
+user1:password1
+test:test123

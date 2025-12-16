@@ -194,7 +194,7 @@ create_virtual_interface() {
     
     # Activar interfaz
     ip link set "$IF_AP" up
-    
+    sleep 2
     # Asignar IP
     ip addr add "$AP_IP/24" dev "$IF_AP" 2>/dev/null || true
     
@@ -317,11 +317,11 @@ configure_firewall() {
     # Redirección HTTP/HTTPS para no autorizados (portal cautivo)
     iptables -t nat -A PREROUTING -i "$IF_AP" -p tcp --dport 80 \
         -m set ! --match-set portal_authorized src \
-        -j DNAT --to-destination "$AP_IP:5000"
+        -j DNAT --to-destination "$AP_IP:8080"
     
     iptables -t nat -A PREROUTING -i "$IF_AP" -p tcp --dport 443 \
         -m set ! --match-set portal_authorized src \
-        -j DNAT --to-destination "$AP_IP:5000"
+        -j DNAT --to-destination "$AP_IP:8080"
     
     # Bloquear otros puertos para no autorizados
     iptables -A FORWARD -i "$IF_AP" -m set ! --match-set portal_authorized src -j DROP
@@ -352,7 +352,7 @@ start_services() {
         cat /var/log/syslog | tail -20 | grep hostapd
         exit 1
     fi
-    
+    sleep 2
     # Iniciar dnsmasq
     log_info "Iniciando dnsmasq..."
     dnsmasq -C "$DNSMASQ_CONF" --pid-file="$DNSMASQ_PID"
@@ -373,7 +373,7 @@ start_services() {
     sleep 2
     
     if pgrep -F "$PORTAL_PID" &>/dev/null; then
-        log_success "Portal cautivo iniciado en http://$AP_IP:5000"
+        log_success "Portal cautivo iniciado en http://$AP_IP:8080"
     else
         log_error "Portal cautivo no pudo iniciarse"
         exit 1
