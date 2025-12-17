@@ -27,6 +27,9 @@ DHCP_RANGE_END="192.168.50.50"
 HOTSPOT_SSID="MiHotspotMovil"
 HOTSPOT_PASSWORD="password123"
 
+HTTP_PORT=80      # Solo redirige
+HTTPS_PORT=8080   # Portal real
+
 # Directorio del proyecto
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -312,14 +315,18 @@ configure_firewall() {
     iptables -t nat -A PREROUTING -i "$IF_AP" -p udp --dport 53 -j DNAT --to-destination "$AP_IP:53"
     iptables -t nat -A PREROUTING -i "$IF_AP" -p tcp --dport 53 -j DNAT --to-destination "$AP_IP:53"
     
-    # Redirección HTTP/HTTPS para no autorizados (portal cautivo)
+    # HTTP (puerto 80) → Servidor HTTP plano (puerto 80)
+    # Este servidor solo redirige a HTTPS
     iptables -t nat -A PREROUTING -i "$IF_AP" -p tcp --dport 80 \
-        -m set ! --match-set portal_authorized src \
-        -j DNAT --to-destination "$AP_IP:8080"
+        -m set ! --match-set portal_authorized src,src \
+        -j DNAT --to-destination "$AP_IP:$HTTP_PORT"
     
+    # HTTPS (puerto 443) → Servidor HTTPS con TLS (puerto 8080)
+    # Este servidor sirve el portal real
     iptables -t nat -A PREROUTING -i "$IF_AP" -p tcp --dport 443 \
-        -m set ! --match-set portal_authorized src \
-        -j DNAT --to-destination "$AP_IP:8080"
+        -m set ! --match-set portal_authorized src,src \
+        -j DNAT --to-destination "$AP_IP:$HTTPS_PORT"
+    
     
     # Bloquear otros puertos para no autorizados
     iptables -A FORWARD -i "$IF_AP" -m set ! --match-set portal_authorized src -j DROP

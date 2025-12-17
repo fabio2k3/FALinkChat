@@ -16,7 +16,7 @@ from fw_manager import add_authorized
 HTML_DIR = os.path.join(os.path.dirname(__file__), '..', 'html')
 
 # URL del portal de login
-PORTAL_URL = '/login'
+PORTAL_URL = 'https://192.168.50.1:8080/login'
 
 
 # ============================================================================
@@ -120,60 +120,33 @@ def handle_request(raw_data: bytes, client_ip: str) -> bytes:
 
 
 def handle_captive_detection(os_type: str, client_ip: str) -> bytes:
-    """
-    Maneja las peticiones de detección de captive portal.
-    
-    Cada sistema operativo espera una respuesta específica:
-    - Si la recibe: "Hay Internet, todo bien"
-    - Si NO la recibe: "Hay un portal cautivo, mostrar página de login"
-    
-    Nosotros queremos que detecte el portal, así que devolvemos
-    una respuesta que FUERZA la apertura del navegador de portal.
-    
-    Args:
-        os_type: Tipo de sistema operativo (apple, android, windows, firefox)
-        client_ip: IP del cliente
-        
-    Returns:
-        Respuesta HTTP que activa la detección de portal
-    """
     print(f"[{client_ip}] Detección de portal: {os_type}")
     
     if os_type == 'apple':
-        # Apple espera "Success". Devolvemos HTML que NO contiene "Success"
-        # Esto fuerza a iOS/macOS a abrir el navegador de portal cautivo
         html = f'''<!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="refresh" content="0;url=http://192.168.50.1{PORTAL_URL}">
+    <meta http-equiv="refresh" content="0;url={PORTAL_URL}">
     <title>Portal Cautivo</title>
 </head>
 <body>
     <h1>Redirigiendo al portal de acceso...</h1>
     <p>Si no es redirigido automáticamente, 
-       <a href="http://192.168.50.1{PORTAL_URL}">haga clic aquí</a>.</p>
+       <a href="{PORTAL_URL}">haga clic aquí</a>.</p>
 </body>
 </html>'''
         return build_response(200, html)
     
     elif os_type == 'android':
-        # Android espera HTTP 204. Devolvemos 302 redirect
-        # Esto fuerza a Android a abrir el navegador de portal
-        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
+        return build_redirect(PORTAL_URL)
     
     elif os_type == 'windows':
-        # Windows espera "Microsoft Connect Test"
-        # Devolvemos redirect para forzar portal
-        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
+        return build_redirect(PORTAL_URL)
     
     elif os_type == 'firefox':
-        # Firefox espera "success" en texto plano
-        # Devolvemos redirect
-        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
+        return build_redirect(PORTAL_URL)
     
-    # Por defecto, redirigir al login
     return build_redirect(PORTAL_URL)
-
 
 def handle_get_login() -> bytes:
     """

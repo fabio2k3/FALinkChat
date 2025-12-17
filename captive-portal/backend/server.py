@@ -34,7 +34,7 @@ class HTTPServer:
         server.start()
     """
     
-    def __init__(self, host: str, port: int, handler: Callable):
+    def __init__(self, host: str, port: int, handler: Callable, ssl_context=None):
         """
         Inicializa el servidor.
         
@@ -46,6 +46,7 @@ class HTTPServer:
         self.host = host
         self.port = port
         self.handler = handler
+        self.ssl_context = ssl_context
         self.server_socket = None
         self.running = False
     
@@ -92,7 +93,21 @@ class HTTPServer:
                 # accept() bloquea hasta que llegue una conexión
                 # Retorna: (socket_cliente, (ip, puerto))
                 client_socket, client_address = self.server_socket.accept()
-                
+                if self.ssl_context is not None:
+                    try:
+                        client_socket = self.ssl_context.wrap_socket(
+                            client_socket, 
+                            server_side=True,
+                            do_handshake_on_connect=True
+                        )
+                    except Exception as e:
+                        print(f"[ERROR] TLS handshake falló: {e}")
+                        try:
+                            client_socket.close()
+                        except:
+                            pass
+                        continue  
+                    
                 # Crear thread para manejar este cliente
                 # daemon=True: el thread muere cuando el programa termina
                 client_thread = threading.Thread(
