@@ -145,13 +145,13 @@ def handle_captive_detection(os_type: str, client_ip: str) -> bytes:
         html = f'''<!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="refresh" content="0;url=http://192.168.4.1{PORTAL_URL}">
+    <meta http-equiv="refresh" content="0;url=http://192.168.50.1{PORTAL_URL}">
     <title>Portal Cautivo</title>
 </head>
 <body>
     <h1>Redirigiendo al portal de acceso...</h1>
     <p>Si no es redirigido automáticamente, 
-       <a href="http://192.168.4.1{PORTAL_URL}">haga clic aquí</a>.</p>
+       <a href="http://192.168.50.1{PORTAL_URL}">haga clic aquí</a>.</p>
 </body>
 </html>'''
         return build_response(200, html)
@@ -159,17 +159,17 @@ def handle_captive_detection(os_type: str, client_ip: str) -> bytes:
     elif os_type == 'android':
         # Android espera HTTP 204. Devolvemos 302 redirect
         # Esto fuerza a Android a abrir el navegador de portal
-        return build_redirect(f'http://192.168.4.1{PORTAL_URL}')
+        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
     
     elif os_type == 'windows':
         # Windows espera "Microsoft Connect Test"
         # Devolvemos redirect para forzar portal
-        return build_redirect(f'http://192.168.4.1{PORTAL_URL}')
+        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
     
     elif os_type == 'firefox':
         # Firefox espera "success" en texto plano
         # Devolvemos redirect
-        return build_redirect(f'http://192.168.4.1{PORTAL_URL}')
+        return build_redirect(f'http://192.168.50.1{PORTAL_URL}')
     
     # Por defecto, redirigir al login
     return build_redirect(PORTAL_URL)

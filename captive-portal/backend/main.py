@@ -6,7 +6,7 @@ Ejecutar con: sudo python3 main.py
 Este script:
 1. Registra manejadores de señales (Ctrl+C)
 2. Carga usuarios desde config/users.txt
-3. Inicia el servidor HTTP en puerto 80
+3. Inicia el servidor HTTP en puerto 8080
 """
 
 import signal
@@ -25,7 +25,7 @@ from auth import load_users
 # CONFIGURACIÓN
 # ============================================================================
 HOST = '0.0.0.0'  # Escuchar en todas las interfaces de red
-PORT = 80         # Puerto HTTP estándar (requiere sudo/root)
+PORT = 8080       # Puerto HTTP estándar (requiere sudo/root)
 
 # Ruta al archivo de usuarios (relativa al directorio del script)
 USERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'config', 'users.txt')

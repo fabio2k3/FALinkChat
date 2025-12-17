@@ -295,8 +295,7 @@ configure_firewall() {
     
     # Crear ipset para clientes autorizados
     ipset destroy portal_authorized 2>/dev/null || true
-    ipset create portal_authorized hash:ip timeout 3600
-    
+    ipset create portal_authorized hash:ip,mac timeout 3600
     # Habilitar IP forwarding
     echo 1 > /proc/sys/net/ipv4/ip_forward
     
@@ -304,9 +303,8 @@ configure_firewall() {
     iptables -t nat -A POSTROUTING -o "$IF_WAN" -j MASQUERADE
     
     # Permitir tráfico de clientes autorizados
-    iptables -A FORWARD -m set --match-set portal_authorized src -j ACCEPT
-    iptables -A FORWARD -m set --match-set portal_authorized dst -j ACCEPT
-    
+   iptables -A FORWARD -m set --match-set portal_authorized src,src -j ACCEPT
+   iptables -A FORWARD -m set --match-set portal_authorized dst,dst -j ACCEPT
     # Permitir tráfico relacionado/establecido
     iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
     
@@ -368,7 +366,7 @@ start_services() {
     # Iniciar servidor del portal
     log_info "Iniciando servidor del portal cautivo..."
     cd "$BACKEND_DIR"
-    python3 portal_server.py &
+    python3 main.py &
     echo $! > "$PORTAL_PID"
     sleep 2
     
